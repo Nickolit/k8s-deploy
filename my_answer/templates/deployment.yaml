@@ -1,0 +1,71 @@
+#-------------------------------------------------------------
+# Manifest File to create Deployment with Labels and AutoScaling
+#
+# Copyleft (c) by Nick Burakovets
+#-------------------------------------------------------------
+---
+apiVersion : apps/v1
+kind: Deployment
+
+# Указываем название деплоя
+
+metadata:
+  name: {{ .Release.Name }}-deployment-autoscaling
+  labels:
+    app  : {{ .Release.Name }}-application
+    env  : prod
+    owner: NickBurakovets
+spec:
+  selector:
+    matchLabels:
+      project: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        project: {{ .Release.Name }}
+    spec:
+
+    # Берём готовый имидж с докер хаба и вывод делаем на 80 порт
+
+      containers:
+        - name : {{ .Release.Name }}-web
+          image: {{ .Values.container.image }}
+          ports:
+            - containerPort: 80
+
+---
+apiVersion: autoscaling/v2beta1
+
+# Подключаем ХПА с требованиями по цпу и памяти
+
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-autoscaling
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v2beta1v1
+    kind: Deployment
+
+    # Указываем наш деплой
+
+    name: {{ .Release.Name }}-deployment-autoscaling
+
+  # По требованиям ставим максимальное кол-во подов на 4 (мин 2 оставляю на случай если 1 упадёт, и пока восстановится, 1 "под" запасной останется)
+
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+  - type: Resource
+    resource:
+
+      # Устанавливаем среднее значение употребления цпу
+
+      name: cpu
+      targetAverageUtilization: 0.1
+  - type: Resource
+    resource:
+
+      # Устанавливаем среднее значение потребления памяти
+
+      name: memory
+      targetAverageUtilization: 128M

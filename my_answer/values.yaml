@@ -1,0 +1,4 @@
+# Default Values for my Helm Chart
+
+container:
+  image: nickolit/k8sphp:latest
